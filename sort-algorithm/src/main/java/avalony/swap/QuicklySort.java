@@ -3,7 +3,7 @@ package avalony.swap;
 import java.util.Random;
 
 /**
- * 快速排序 冒泡改进版 O(nlogn)
+ * 快速排序 冒泡改进版 O(nlogn) 分治思想
  * 核心在于基准关键值的选取,可以固定切分,可以取中值,可以随机
  * 前后下标移动的起始跟基准关键值的下标有关系
  */
