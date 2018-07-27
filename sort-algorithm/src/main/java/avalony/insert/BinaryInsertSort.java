@@ -14,10 +14,6 @@ public class BinaryInsertSort {
             int temp = sort[i];
             while (low <= high) {
                 int mid = (low+high)/2;
-                if (temp == sort[mid]) {
-                    low = mid;
-                    break;
-                }
                 if(isAsc) {
                     if (temp > sort[mid]) {
                         low = mid + 1;
