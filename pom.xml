@@ -11,6 +11,7 @@
     <modules>
         <module>simple-mybatis-demo</module>
         <module>sort-algorithm</module>
+        <module>bloom-filter-demo</module>
     </modules>
 
 </project>
