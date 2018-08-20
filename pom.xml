@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.avalony</groupId>
-        <artifactId>avalony-java-study</artifactId>
-        <version>1.0</version>
-    </parent>
-    <artifactId>sort-algorithm</artifactId>
+    <groupId>com.avalony</groupId>
+    <artifactId>avalony-java-study</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0</version>
+    <modules>
+        <module>simple-mybatis-demo</module>
+        <module>sort-algorithm</module>
+    </modules>
 
-
-    
 </project>
