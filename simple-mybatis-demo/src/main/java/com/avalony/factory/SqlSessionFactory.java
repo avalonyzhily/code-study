@@ -11,18 +11,12 @@ import java.util.Map;
 public class SqlSessionFactory {
 
     private Configuration conf;
-    private Map<String,MappedStatement> mappedStatementMap;
 
     public SqlSessionFactory(Configuration conf) {
         this.conf = conf;
-        initMapped();
     }
-
-    private void initMapped() {
-    }
-
     public SqlSession getSqlSession(){
         Executor executor = new DefaultExecutor(conf);
-        return new DefaultSqlSession(executor,mappedStatementMap);
+        return new DefaultSqlSession(executor,conf.getMapperMap());
     }
 }

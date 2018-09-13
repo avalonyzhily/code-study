@@ -2,9 +2,19 @@ package com.avalony.config;
 
 public class MappedStatement {
     private String sqlId;
+    private String sqlType;
     private String parameterType;
     private String resultType;
     private String sqlText;
+
+
+    public String getSqlType() {
+        return sqlType;
+    }
+
+    public void setSqlType(String sqlType) {
+        this.sqlType = sqlType;
+    }
 
     public String getSqlText() {
         return sqlText;

@@ -16,10 +16,9 @@ public class DefaultSqlSession implements SqlSession {
         this.mappedStatementMap = mappedStatementMap;
     }
 
-    public <T> T selectOne(String sqlId,Object obj) {
+    public List<Map<String, Object>> selectOne(String sqlId,Object obj) {
         MappedStatement ms = mappedStatementMap.get(sqlId);
-        executor.execute(ms,obj);
-        return null;
+        return executor.execute(ms,obj);
     }
 
     public <T> List<T> selectList(String sqlId,Object obj) {
