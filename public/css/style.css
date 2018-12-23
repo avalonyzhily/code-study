@@ -1,0 +1,174 @@
+body {
+    margin: 0px;
+    left: 0px;
+    font-family: "arial";
+}
+
+/*鍏ㄥ眬鎸夐挳CSS*/
+.fl-btn {
+    border-radius: 6px;
+    background: rgb(255, 255, 255);
+    font-family: "arial";
+    border: none;
+    height: 24px;
+    margin-left: 8px;
+}
+
+.fl-btn:active {
+    outline: 0 none !important;
+    border: none;
+}
+
+.fl-btn::-moz-focus-inner {
+    border-color: transparent !important;
+}
+
+.top-title{
+    border-top: 2px solid rgb(241, 240, 241);
+    border-bottom: 2px solid rgb(241, 240, 241);
+    height: 50px;
+    font-size: 24px;
+    position: absolute;
+    text-align: center;
+    line-height: 52px;
+    width:100%;
+}
+.button-save{
+    border-radius: 8px;
+    float: left;
+    width: 100px;
+    height: 16px;
+    margin: 3px 10px 10px 10px;
+    background: rgb(159, 184, 254);
+    text-align: center;
+    border: 2px solid rgb(159, 184, 254);
+    font-size: 18px;
+    line-height: 16px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+.button-save:hover{
+    cursor: pointer;
+}
+.chart-design {
+    position: absolute;
+    top: 104px;
+    bottom: 22px;
+    width:100%;
+    height:100%;
+    z-index: -1;
+}
+
+.chart-top-panel {
+    border-bottom: 2px solid rgb(241, 240, 241);
+    top: 54px;
+    position: absolute;
+    width:100%;
+}
+
+#rear-ratio-display {
+    width: 60px;
+}
+
+.chart-list {
+    color: rgb(136, 136, 136);
+    font-size: 14px;
+    margin-top: 19px;
+}
+
+.chart-list .list-content {
+    color: rgb(69, 69, 69);
+    margin-top: -20px;
+    padding-top: 5px;
+    margin-bottom: 22px;
+}
+
+
+.draggable {
+    float: left;
+    width: 120px;
+    height: 20px;
+    margin: 3px 10px 10px 10px;
+    background: rgb(52, 176, 255);
+    text-align: center;
+    border: 2px solid rgb(52, 176, 255);
+    font-size: 18px;
+    line-height: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.draggable:hover {
+    cursor: pointer;
+}
+
+.droppable {
+    margin-top: 0px;
+    padding-left: 0px;
+}
+
+.drop-active {
+    background: rgb(238, 238, 238);
+}
+
+._jsPlumb_drag_select * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.click_menu {
+    position: absolute;
+    visibility: hidden;
+    z-index: 0;
+    overflow: hidden;
+    width: 150px;
+    background-color: buttonface;
+    border: dimgray 1px solid !important;
+    padding: 1px !important;
+    padding: 1px 1px 1px 0px;
+    font-size: 12px;
+}
+
+.click_menu a {
+    display: block;
+    width: 100%;
+    padding: 1px 2px 2px 20px;
+    cursor: default;
+    text-decoration: none;
+    color: #000000;
+}
+
+.click_menu a:hover {
+    background: highlight;
+    color: #ffffff;
+}
+
+.tips_dialog {
+    display: none;
+}
+
+.top-left-panel {
+    float: left;
+    margin-left: 1%;
+}
+.pop-window{
+    display: none;
+}
+.text-left{
+    text-align: left;
+    width:25%;
+}
+.text-right{
+    text-align: right;
+    width:20%;
+}
+.pop-title{
+    font-size:1.1em;
+    text-align: center;
+    line-height: 1.1em;
+
+}

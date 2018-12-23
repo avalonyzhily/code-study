@@ -1,0 +1,6 @@
+valid:
+  license:
+    validText: あいしてるa
+    cron: 0 01 0 * * ?
+  cdKey:
+  rawKey:

@@ -1,0 +1,438 @@
+package com.ava.ctrl;
+
+import org.raml.v2.api.RamlModelBuilder;
+import org.raml.v2.api.RamlModelResult;
+import org.raml.v2.api.model.common.ValidationResult;
+import org.raml.v2.api.model.v10.api.Api;
+import org.raml.v2.api.model.v10.api.Library;
+import org.raml.v2.api.model.v10.bodies.Response;
+import org.raml.v2.api.model.v10.datamodel.*;
+import org.raml.v2.api.model.v10.methods.Method;
+import org.raml.v2.api.model.v10.resources.Resource;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.*;
+
+@RestController
+public class AppCtrl {
+    private final Map<String,Object> definitionMap = new HashMap<>();
+    @RequestMapping("/test")
+    public Map<String,Object> ok(){
+		String filePath = "http://localhost:9999/OP/Config/Noya_OP_Config.raml";
+        RamlModelResult ramlModelResult = new RamlModelBuilder().buildApi(filePath);
+        Api api = null;
+        if (ramlModelResult.hasErrors()) {
+            for (ValidationResult validationResult : ramlModelResult.getValidationResults()) {
+                System.out.println(validationResult.getMessage());
+            }
+        } else {
+            api = ramlModelResult.getApiV10();
+        }
+        List<TypeDeclaration> types = api.types();
+        List<Library> uses = api.uses();
+        List<Resource> resources = api.resources();
+        Map<String,Object> typesMapInitial = this.parserTypesToMapInitial(types);
+        Map<String,Object> usesTypesMapInitial = this.parserUsesToMapInitial(uses);
+        definitionMap.clear();
+        definitionMap.putAll(typesMapInitial);
+        definitionMap.putAll(usesTypesMapInitial);
+        this.parserDefinitionInitialToMap();
+
+        Map<String,Object> resourcesMap = this.parserResourcesToMap(resources);
+        return resourcesMap;
+    }
+
+    /**
+     * 从types中解析类型信息
+     * @param types
+     * @return
+     */
+    private Map<String, Object> parserTypesToMapInitial(List<TypeDeclaration> types) {
+        Map<String, Object> typesMap = new HashMap<>();
+        //遍历types中的类型定义
+        types.stream().forEach(type -> {
+            //类名
+            String name = type.name();
+            //类型名称
+            String typeName = type.type();
+
+            if ("object".equalsIgnoreCase(typeName)) {
+                //内置object类型,则处理其properties属性集合
+                ObjectTypeDeclaration objType = (ObjectTypeDeclaration) type;
+                List<TypeDeclaration> propertiesList = objType.properties();
+                Map<String, Object> subTypesMap = this.parserPropertiesToMapInitial(propertiesList);
+                typesMap.put(name, subTypesMap);
+            } else if ("string".equalsIgnoreCase(typeName)) {
+                //内置string类型,提取对应的属性
+                Map<String, Object> typeInfo = new HashMap<>();
+                StringTypeDeclaration stringType = (StringTypeDeclaration) type;
+                String pattern = stringType.pattern();
+                Integer minLength = stringType.minLength();
+                Integer maxLength = stringType.maxLength();
+                List<String> enumValues = stringType.enumValues();
+                Boolean required = type.required();
+                typeInfo.put("type", typeName);
+                if (pattern != null) {
+                    typeInfo.put("pattern", pattern);
+                }
+                if (minLength != null) {
+                    typeInfo.put("minLength", minLength);
+                }
+                if (maxLength != null) {
+                    typeInfo.put("maxLength", maxLength);
+                }
+                if (enumValues != null && enumValues.size() > 0) {
+                    typeInfo.put("enumValues", enumValues);
+                }
+                if (required != null) {
+                    typeInfo.put("required", required);
+                }
+                typesMap.put(name, typeInfo);
+            } else if ("number".equalsIgnoreCase(typeName) || "integer".equalsIgnoreCase(typeName)) {
+                //内置数字类型,提取对应的属性
+                Map<String, Object> typeInfo = new HashMap<>();
+                NumberTypeDeclaration numberType = (NumberTypeDeclaration) type;
+                Double minimum = numberType.minimum();
+                String format = numberType.format();
+                Double maximum = numberType.maximum();
+                List<Number> enumValues = numberType.enumValues();
+                Boolean required = type.required();
+                typeInfo.put("type", typeName);
+                if (minimum != null) {
+                    typeInfo.put("minimum", minimum);
+                }
+                if (format != null) {
+                    typeInfo.put("format", format);
+                }
+                if (maximum != null) {
+                    typeInfo.put("maximum", maximum);
+                }
+                if (enumValues != null && enumValues.size() > 0) {
+                    typeInfo.put("enumValues", enumValues);
+                }
+                if (required != null) {
+                    typeInfo.put("required", required);
+                }
+                typesMap.put(name, typeInfo);
+            }else if("datetime".equalsIgnoreCase(typeName)){
+                //内置时间类型,提取对应的属性
+                Map<String, Object> typeInfo = new HashMap<>();
+                DateTimeTypeDeclaration dateTimeType = (DateTimeTypeDeclaration) type;
+                typeInfo.put("type", typeName);
+                typeInfo.put("format",dateTimeType.format());
+                typesMap.put(name, typeInfo);
+            }else if("date-only".equalsIgnoreCase(typeName)
+                    ||"time-only".equalsIgnoreCase(typeName)
+                    ||"boolean".equalsIgnoreCase(typeName)
+                    ||"nil".equalsIgnoreCase(typeName)
+                    ||"file".equalsIgnoreCase(typeName)
+                    ||"datetime-only".equalsIgnoreCase(typeName)){
+                //其他类型,暂不知道需要提取什么属性
+                Map<String, Object> typeInfo = new HashMap<>();
+                typeInfo.put("type", typeName);
+                typesMap.put(name, typeInfo);
+            } else {
+                if("GetTechnologysResponseVO".equals(name)){
+                    System.out.println(name);
+                }
+                if(!StringUtils.isEmpty(typeName)&&typeName.indexOf("[]")>-1){
+                    //该类型是某个类型的数组/集合
+                    Map<String, Object> typeInfo = new HashMap<>();
+                    typeInfo.put(name,typeName);
+                    typesMap.put(name, typeInfo);
+                }else {
+                    //自定义类型,一方面从提取从父类型中继承的属性,保存好自定义类型的名称及其继承属性的映射,后续二次解析的时候,可以通过属性的填充来完善间接引用的属性
+                    //不是内置的object类型 或是类型的类型名称不为空时,尝试获取其父类型
+                    List<TypeDeclaration> parentTypes = type.parentTypes();
+                    //递归获取所有的父类型属性信息
+                    Map<String, Object> parentTypesMap = parserTypesToMapInitial(parentTypes);
+                    if (parentTypesMap != null && parentTypesMap.size() > 0) {
+                        Map<String, Object> typeInfo = new HashMap<>();
+                        parentTypesMap.forEach((key, value) -> {
+                            if (value instanceof Map) {
+                                typeInfo.putAll((Map<String, Object>) value);
+                            }
+                        });
+                        typesMap.put(name, typeInfo);
+                    }
+                }
+            }
+        });
+        return typesMap;
+    }
+
+    /**
+     * 处理内置object类型的属性集合,获取每一个property上定义的属性,并按属性名映射好
+     * @param propertiesList
+     * @return
+     */
+    private Map<String, Object> parserPropertiesToMapInitial(List<TypeDeclaration> propertiesList) {
+        Map<String, Object> resMap = new HashMap<>();
+        propertiesList.stream().forEach(property -> {
+            String displayName = property.displayName()!=null?property.displayName().value():property.name();
+            String description = property.description()!=null?property.description().value():property.name();
+            Boolean required = property.required()!=null?property.required():true;
+            Map<String,Object> propertyMap = new HashMap<>();
+            propertyMap.put(property.name()+"-definition",property.type());
+            propertyMap.put("displayName",displayName);
+            propertyMap.put("description",description);
+            propertyMap.put("inputFlag",required);
+            resMap.put(property.name(), propertyMap);
+        });
+        return resMap;
+    }
+
+    /**
+     * 二次处理类型映射表,因为首次处理是,间接引用的类型无法填充完成,只能获取基本类型的属性列表
+     */
+    private void parserDefinitionInitialToMap() {
+        Set<Map.Entry<String, Object>> entrySet = definitionMap.entrySet();
+        for (Map.Entry<String, Object> entry : entrySet) {
+            if(entry.getValue() instanceof Map) {
+                Map<String, Object> typeInfo = (Map<String, Object>) entry.getValue();
+                Set<Map.Entry<String, Object>> subEntrySet = typeInfo.entrySet();
+                for (Map.Entry<String, Object> subEntry : subEntrySet) {
+                    Object subEntryValue = subEntry.getValue();
+                    if (subEntryValue instanceof Map) {
+                        String key = subEntry.getKey();
+                        //这里的格式是自定义的,并不是raml原有的结构,为的是处理properties属性中又定义了properties属性本身的属性的问题
+                        Object value = ((Map<String, Object>) subEntryValue).get(key + "-definition");
+                        boolean isArray = false;
+                        //这里是为了处理定义的是某个类型的集合的情况
+                        if (value instanceof String && ((String) value).contains("[]")) {
+                            value = ((String) value).replace("[]", "");
+                            isArray = true;
+                        }
+                        //这里是从类型映射表中,取出对应类型的定义,然后填充到间接引用的类型中去,完善定义
+                        if (definitionMap.containsKey(value)) {
+                            if (isArray) {
+                                List<Object> valueList = new ArrayList<>();
+                                Map<String, Object> valueMap = (Map<String, Object>) definitionMap.get(value);
+                                ((Map) subEntryValue).putAll(valueMap);
+                                valueList.add(subEntryValue);
+                                subEntry.setValue(valueList);
+                            } else {
+                                Map<String, Object> valueMap = (Map<String, Object>) definitionMap.get(value);
+                                ((Map) subEntryValue).putAll(valueMap);
+                                subEntry.setValue(subEntryValue);
+                            }
+                        }
+                    }
+                }
+            }else if(entry.getValue() instanceof String){
+                String value = (String)entry.getValue();
+                boolean isArray = false;
+                //这里是为了处理定义的是某个类型的集合的情况
+                if (value instanceof String && ((String) value).contains("[]")) {
+                    value = ((String) value).replace("[]", "");
+                    isArray = true;
+                }
+                //这里是从类型映射表中,取出对应类型的定义,然后填充到间接引用的类型中去,完善定义
+                if (definitionMap.containsKey(value)) {
+                    if (isArray) {
+                        List<Object> valueList = new ArrayList<>();
+                        Map<String, Object> valueMap = (Map<String, Object>) definitionMap.get(value);
+                        valueList.add(valueMap);
+                        entry.setValue(valueList);
+                    } else {
+                        Map<String, Object> valueMap = (Map<String, Object>) definitionMap.get(value);
+                        entry.setValue(valueMap);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 从uses引用中提取types属性,然后解析types,由于uses引入的类库文件中可能再次引入uses,所以需要考虑subUses的情况
+     * @param uses
+     * @return
+     */
+    private Map<String, Object> parserUsesToMapInitial(List<Library> uses) {
+        Map<String, Object> resMap = new HashMap<>();
+        uses.stream().forEach(lib -> {
+            List<TypeDeclaration> types = lib.types();
+            Map<String, Object> typesMap = parserTypesToMapInitial(types);
+            resMap.putAll(typesMap);
+            List<Library> subUses = lib.uses();
+            if (subUses != null && subUses.size() > 0) {
+                Map<String, Object> subResMap = this.parserUsesToMapInitial(subUses);
+                resMap.putAll(subResMap);
+            }
+        });
+        return resMap;
+
+    }
+
+    private  Map<String,Object> parserExamplePropertiesToMap(List<TypeInstanceProperty> typeInstancePropertyList) {
+        Map<String,Object> resMap = new HashMap<>();
+        typeInstancePropertyList.parallelStream().forEach(typeInstanceProperty -> {
+            if(typeInstanceProperty.isArray()){
+                List<TypeInstance> typeInstanceList = typeInstanceProperty.values();
+                typeInstanceList.parallelStream().forEach(typeInstance -> {
+                    List<TypeInstanceProperty> subTypeInstancePropertyList = typeInstance.properties();
+                    if(subTypeInstancePropertyList!=null&&subTypeInstancePropertyList.size()>0) {
+                        Map<String, Object> subResMap = parserExamplePropertiesToMap(subTypeInstancePropertyList);
+                        resMap.put(typeInstanceProperty.name(), subResMap);
+                    }else {
+                        resMap.put(typeInstanceProperty.name(), typeInstance.value().toString());
+                    }
+                });
+            }else {
+                TypeInstance typeInstanceSingle = typeInstanceProperty.value();
+                List<TypeInstanceProperty> subTypeInstancePropertyList = typeInstanceSingle.properties();
+                if(subTypeInstancePropertyList!=null&&subTypeInstancePropertyList.size()>0) {
+                    Map<String, Object> subResMap = parserExamplePropertiesToMap(subTypeInstancePropertyList);
+                    resMap.put(typeInstanceProperty.name(), subResMap);
+                }else {
+                    resMap.put(typeInstanceProperty.name(), typeInstanceSingle.value().toString());
+                }
+            }
+        });
+        return resMap;
+    }
+    /**
+     * 这里是递归的遍历资源信息,然后使用类型映射表中的信息,来填充资源中引用的类型
+     * @param resources
+     * @return
+     */
+    private Map<String,Object> parserResourcesToMap(List<Resource> resources) {
+        Map<String,Object> resMap = new HashMap<>();
+        resources.parallelStream().forEach(resource -> {
+            List<Method> methods = resource.methods();
+            if(methods!=null&&methods.size()>0){
+                Map<String,Object> resourceInfoMap = new HashMap<>();
+                Map<String,Object> methodsMap = this.parserMethodsToMap(methods);
+                resourceInfoMap.put("description",resource.description()!=null?resource.description().value():"");
+                resourceInfoMap.put("displayName",resource.displayName()!=null?resource.displayName().value():"");
+                resourceInfoMap.put("methods",methodsMap);
+                resMap.put(resource.resourcePath(),resourceInfoMap);
+            }
+            List<Resource> subResources = resource.resources();
+            Map<String,Object> subResMap = parserResourcesToMap(subResources);
+            resMap.putAll(subResMap);
+        });
+        return resMap;
+    }
+    /**
+     * 解析资源对应的方法,譬如GET POST等
+     * @param methods
+     * @return
+     */
+    private Map<String,Object> parserMethodsToMap(List<Method> methods) {
+        Map<String,Object> methodsMap = new HashMap<>();
+        methods.parallelStream().forEach(method -> {
+            Map<String,Object> methodMap = new HashMap<>();
+            List<Map<String,Object>> queryParametersMap = parserParametersToMap(method.queryParameters());
+            List<Map<String,Object>> uriParametersMap = parserUriPrametersMap(method.resource());
+            List<Map<String,Object>> bodyMap = parserBodyOrHeaderToMap(method.body());
+            List<Map<String,Object>> headersMap = parserBodyOrHeaderToMap(method.headers());
+            Map<String,Object> responsesMap = parserResponsesToMap(method.responses());
+            if(queryParametersMap!=null&&queryParametersMap.size()>0) {
+                methodMap.put("queryParameters", queryParametersMap);
+            }
+            if(uriParametersMap!=null&&uriParametersMap.size()>0) {
+                methodMap.put("uriParameters", uriParametersMap);
+            }
+            if(bodyMap!=null&&bodyMap.size()>0) {
+                methodMap.put("body",bodyMap);
+            }
+            if(headersMap!=null&&headersMap.size()>0) {
+                methodMap.put("headers",headersMap);
+            }
+            if(responsesMap!=null&&responsesMap.size()>0) {
+                methodMap.put("responses",responsesMap);
+            }
+            String methodName = method.method();
+            methodsMap.put(methodName,methodMap);
+        });
+        return methodsMap;
+    }
+
+    private List<Map<String,Object>> parserUriPrametersMap(Resource resource) {
+        List<Map<String,Object>> resMap = new ArrayList<>();
+        List<Map<String,Object>> selfUriParametersMap = parserParametersToMap(resource.uriParameters());
+        resMap.addAll(selfUriParametersMap);
+        Resource parentResource = resource.parentResource();
+        if(parentResource!=null){
+            List<Map<String,Object>> parentUriParametersMap = this.parserUriPrametersMap(parentResource);
+            resMap.addAll(parentUriParametersMap);
+        }
+        return resMap;
+    }
+
+    private List<Map<String,Object>> parserParametersToMap(List<TypeDeclaration> typeDeclarations) {
+        List<Map<String,Object>> resMap = new ArrayList<>();
+        typeDeclarations.parallelStream().forEach(typeDeclaration -> {
+            Map<String,Object> typeDeclarationMap = new HashMap<>();
+            if(typeDeclaration.required()!=null) {
+                typeDeclarationMap.put("required", typeDeclaration.required());
+            }
+            if(typeDeclaration.type()!=null) {
+                typeDeclarationMap.put("type", typeDeclaration.type());
+
+            }
+            if(definitionMap.get(typeDeclaration.type())!=null){
+                typeDeclarationMap.put("definition",definitionMap.get(typeDeclaration.type()));
+            }
+            if(typeDeclaration.defaultValue()!=null) {
+                typeDeclarationMap.put("defaultValue", typeDeclaration.defaultValue());
+            }
+            if(typeDeclaration.description()!=null) {
+                typeDeclarationMap.put("description",typeDeclaration.description().value());
+            }
+            if(typeDeclaration.name()!=null) {
+                typeDeclarationMap.put("name",typeDeclaration.name());
+            }
+            resMap.add(typeDeclarationMap);
+        });
+        return resMap;
+    }
+    private List<Map<String,Object>> parserBodyOrHeaderToMap(List<TypeDeclaration> typeDeclarations) {
+        List<Map<String,Object>> resMap = new ArrayList<>();
+        typeDeclarations.parallelStream().forEach(typeDeclaration -> {
+            Map<String,Object> typeDeclarationMap = new HashMap<>();
+            if(typeDeclaration.required()!=null) {
+                typeDeclarationMap.put("required", typeDeclaration.required());
+            }
+            if(typeDeclaration.type()!=null) {
+                typeDeclarationMap.put("type", typeDeclaration.type());
+            }
+            if(definitionMap.get(typeDeclaration.type())!=null){
+                typeDeclarationMap.put("definition",definitionMap.get(typeDeclaration.type()));
+            }
+            if(typeDeclaration.defaultValue()!=null) {
+                typeDeclarationMap.put("defaultValue", typeDeclaration.defaultValue());
+            }
+            if(typeDeclaration.description()!=null) {
+                typeDeclarationMap.put("description",typeDeclaration.description().value());
+            }
+            if(typeDeclaration.name()!=null) {
+                typeDeclarationMap.put("mediaType",typeDeclaration.name());
+            }
+            resMap.add(typeDeclarationMap);
+        });
+        return resMap;
+    }
+    private Map<String,Object> parserResponsesToMap(List<Response> responses) {
+        Map<String,Object> resMap = new HashMap<>();
+        responses.parallelStream().forEach(response -> {
+            Map<String,Object> responseMap = new HashMap<>();
+            List<Map<String,Object>> bodyMap = parserBodyOrHeaderToMap(response.body());
+            List<Map<String,Object>> headersMap = parserBodyOrHeaderToMap(response.headers());
+            if(bodyMap!=null&&bodyMap.size()>0) {
+                responseMap.put("body",bodyMap);
+            }
+            if(headersMap!=null&&headersMap.size()>0) {
+                responseMap.put("headers",headersMap);
+            }
+            if(response.description()!=null) {
+                responseMap.put("description",response.description().value());
+            }
+            resMap.put(response.code().value(),responseMap);
+        });
+        return resMap;
+    }
+}
