@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<mapper namespace="com.avalony.dao.UserMapper">
-    <select id="select" parameterType="String" resultType="com.avalony.entity.User">
-        select id,name,age from user where id = ?
-    </select>
-    <insert id="insert" parameterType="com.avalony.entity.User">
-        insert into user value(#{id},#{name},#{age})
-    </insert>
-</mapper>
